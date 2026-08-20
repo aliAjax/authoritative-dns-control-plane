@@ -43,7 +43,7 @@ func (c *Cache) Get(k string) ([]byte, bool, bool) {
 		delete(c.items, k)
 		return nil, false, e.Negative
 	}
-	return e.Packet, true, e.Negative
+	return append([]byte(nil), e.Packet...), true, e.Negative
 }
 func (c *Cache) Put(k string, p []byte, ttl time.Duration, neg bool) {
 	c.mu.Lock()
@@ -54,7 +54,7 @@ func (c *Cache) Put(k string, p []byte, ttl time.Duration, neg bool) {
 			break
 		}
 	}
-	c.items[k] = CacheEntry{Packet: p, Expires: time.Now().Add(ttl), Negative: neg}
+	c.items[k] = CacheEntry{Packet: append([]byte(nil), p...), Expires: time.Now().Add(ttl), Negative: neg}
 }
 
 type Server struct {
