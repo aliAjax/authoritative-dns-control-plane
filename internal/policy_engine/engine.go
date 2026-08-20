@@ -71,6 +71,9 @@ func Evaluate(p Policy, q Query) (Decision, error) {
 		return c[i].Priority < c[j].Priority
 	})
 	for _, r := range c {
+		if err := validateRule(r); err != nil {
+			return Decision{}, err
+		}
 		ok, why := match(r, q)
 		if !ok {
 			continue
@@ -86,6 +89,17 @@ func Evaluate(p Policy, q Query) (Decision, error) {
 		return Decision{RuleID: r.ID, Values: []zone_domain.RecordValue{{Value: targets[idx]}}, Explanation: why + fmt.Sprintf("; selected target %s", targets[idx])}, nil
 	}
 	return Decision{Negative: true, Explanation: "no policy rule matched"}, nil
+}
+func validateRule(r Rule) error {
+	if r.ID == "" {
+		return fmt.Errorf("policy rule missing id")
+	}
+	if r.CIDR != "" {
+		if _, _, err := net.ParseCIDR(r.CIDR); err != nil {
+			return fmt.Errorf("rule %s: invalid cidr %q: %w", r.ID, r.CIDR, err)
+		}
+	}
+	return nil
 }
 func match(r Rule, q Query) (bool, string) {
 	if r.Region != "" && r.Region != q.Region {
