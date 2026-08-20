@@ -77,11 +77,20 @@ func (m *Manager) Activate(id string) error {
 func (m *Manager) Sign(keyID, name, typ, data string) (Signature, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	k, ok := m.keys[keyID]
-	if ok && k.State != Active {
-		return Signature{}, fmt.Errorf("active key required")
+	k, err := lookupSigningKey(m.keys, keyID)
+	if err != nil {
+		return Signature{}, err
+	}
+	if err := validateSigningKey(k); err != nil {
+		return Signature{}, err
+	}
+	if data == "" {
+		return Signature{}, fmt.Errorf("signature data required")
 	}
 	sig := Signature{KeyID: keyID, Name: name, Type: typ, Digest: fmt.Sprintf("sig-%x", []byte(data)), ExpiresAt: time.Now().Add(24 * time.Hour)}
+	if err := validateSignatureInput(name, typ); err != nil {
+		return Signature{}, err
+	}
 	m.sigs[name+typ] = sig
 	return sig, nil
 }
