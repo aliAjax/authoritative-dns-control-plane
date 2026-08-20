@@ -30,13 +30,13 @@ func (c *Client) Do(ctx context.Context, method, url string, body io.Reader) ([]
 		}
 		resp, e := c.HTTP.Do(req)
 		if e != nil {
-			last = e
+			last = fmt.Errorf("request failed: %v", e)
 			continue
 		}
 		b, e := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 		resp.Body.Close()
 		if e != nil {
-			last = e
+			last = fmt.Errorf("response read failed: %v", e)
 			continue
 		}
 		if resp.StatusCode >= 500 {
