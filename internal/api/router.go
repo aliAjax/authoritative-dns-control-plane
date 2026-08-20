@@ -153,7 +153,7 @@ type policyInput struct {
 	Policy policy_engine.Policy `json:"policy"`
 }
 
-func contextFor(*http.Request) context.Context { return context.Background() }
+func contextFor(r *http.Request) context.Context { return r.Context() }
 func write(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)
