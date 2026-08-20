@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info:
+  title: Authoritative DNS Control Plane
+  version: 1.0.0
+paths:
+  /healthz:
+    get: {responses: {"200": {description: healthy}}}
+  /api/v1/zones:
+    get: {responses: {"200": {description: zones}}}
+    post: {responses: {"201": {description: created}}}
+  /dns-query:
+    post: {responses: {"200": {description: DNS message}}}
+

@@ -1,0 +1,15 @@
+syntax = "proto3";
+package authoritative_dns;
+option go_package = "example.com/authoritativedns/api/gen";
+service ZoneCompiler { rpc Compile(CompileRequest) returns (CompileResponse); }
+service HealthProbe { rpc Check(CheckRequest) returns (CheckResponse); }
+service AnycastPlanner { rpc Plan(PlanRequest) returns (PlanResponse); }
+message CompileRequest { string zone_id = 1; uint32 serial = 2; }
+message CompileResponse { bool valid = 1; string digest = 2; repeated string errors = 3; }
+message CheckRequest { string probe_id = 1; string endpoint = 2; }
+message CheckResponse { bool healthy = 1; uint64 latency_ms = 2; string error = 3; }
+message PlanRequest { repeated Node nodes = 1; }
+message Node { string id = 1; string address = 2; double capacity = 3; double availability = 4; }
+message PlanResponse { repeated Intent intents = 1; }
+message Intent { string node_id = 1; bool advertise = 2; string reason = 3; }
+

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: authoritative-dns}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: authoritative-dns}}
+  template:
+    metadata: {labels: {app: authoritative-dns}}
+    spec:
+      containers:
+        - name: control-plane
+          image: authoritative-dns:local
+          ports: [{name: http, containerPort: 8080}, {name: dns, containerPort: 8053, protocol: UDP}]
+          readinessProbe: {httpGet: {path: /readyz, port: http}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: authoritative-dns}
+spec:
+  selector: {app: authoritative-dns}
+  ports: [{name: http, port: 8080, targetPort: http}, {name: dns, port: 53, targetPort: dns, protocol: UDP}]
+

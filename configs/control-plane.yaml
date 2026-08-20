@@ -1,0 +1,16 @@
+http:
+  addr: ":8080"
+dns:
+  udp_addr: ":8053"
+  tcp_addr: ":8053"
+  dot_addr: ":8853"
+  doh_path: "/dns-query"
+cache:
+  capacity: 4096
+  max_ttl_seconds: 86400
+security:
+  max_packet_size: 4096
+  rate_per_second: 1000
+storage:
+  backend: memory
+
