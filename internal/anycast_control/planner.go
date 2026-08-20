@@ -46,14 +46,9 @@ func Plan(nodes []Node) ([]Intent, error) {
 			reason = "fenced, unhealthy, expired lease or exhausted capacity"
 		}
 		in := Intent{ID: fmt.Sprintf("intent-%s-%d", n.ID, n.Fencing), NodeID: n.ID, Advertise: ok, Reason: reason, Fencing: n.Fencing, CreatedAt: time.Now().UTC()}
-		state.Lock()
-		if old, exists := state.last[n.ID]; exists && old.Fencing > in.Fencing {
-			state.last[n.ID] = in
-			state.Unlock()
+		if !rememberIntent(n.ID, in) {
 			continue
 		}
-		state.last[n.ID] = in
-		state.Unlock()
 		out = append(out, in)
 	}
 	return out, nil
