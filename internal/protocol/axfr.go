@@ -34,19 +34,10 @@ func (r *TransferReader) Next() (zone_domain.RecordSet, bool) {
 	return x, true
 }
 func (r *TransferReader) Reset() { r.mu.Lock(); r.idx = 0; r.mu.Unlock() }
-func EncodeTransfer(w io.Writer, t Transfer) error {
-	bw := bufio.NewWriter(w)
-	if _, e := fmt.Fprintf(bw, "$ORIGIN %s\n$SERIAL %d\n", t.Zone, t.Serial); e != nil {
-		return e
-	}
-	for _, r := range t.Records {
-		for _, v := range r.Values {
-			if _, e := fmt.Fprintf(bw, "%s %d IN %s %s\n", r.Name, r.TTL, r.Type, v.Value); e != nil {
-				return e
-			}
-		}
-	}
-	return nil
+func EncodeTransfer(w io.Writer, t Transfer) (err error) {
+	bw := newTransferBuffer(w)
+	defer func() { err = finishTransfer(bw, err) }()
+	return writeTransferPayload(bw, t)
 }
 func DecodeTransfer(rd io.Reader) (Transfer, error) {
 	s := bufio.NewScanner(rd)
