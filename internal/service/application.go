@@ -28,6 +28,9 @@ func NewApplication(s *repository.MemoryStore) *Application {
 	return &Application{Store: s, policies: map[string]policy_engine.Policy{}, probes: map[string]probe_domain.Probe{}, keys: map[string]dnssec.Key{}}
 }
 func (a *Application) CreateZone(ctx context.Context, name string) (zone_domain.Zone, error) {
+	if err := resolveContextError(ctx); err != nil {
+		return zone_domain.Zone{}, err
+	}
 	n := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(name)), ".")
 	if n == "" || !strings.Contains(n, ".") {
 		return zone_domain.Zone{}, fmt.Errorf("invalid zone name")
@@ -41,6 +44,9 @@ func (a *Application) GetZone(ctx context.Context, id string) (zone_domain.Zone,
 }
 func (a *Application) ListZones(ctx context.Context) []zone_domain.Zone { return a.Store.ListZones() }
 func (a *Application) AddRecord(ctx context.Context, zoneID string, rs zone_domain.RecordSet) (zone_domain.RecordSet, error) {
+	if err := resolveContextError(ctx); err != nil {
+		return rs, err
+	}
 	z, ok := a.Store.GetZone(zoneID)
 	if !ok {
 		return rs, fmt.Errorf("zone not found")
@@ -66,11 +72,17 @@ func (a *Application) Rollback(ctx context.Context, id, snapshotID string) (zone
 	return snapshot_release.Rollback(ctx, a.Store, id, snapshotID)
 }
 func (a *Application) Resolve(ctx context.Context, q policy_engine.Query) (policy_engine.Decision, error) {
+	if err := resolveContextError(ctx); err != nil {
+		return policy_engine.Decision{}, err
+	}
 	return policy_engine.Resolve(a.Store, q)
 }
 
 // ResolveDNS selects the longest matching authoritative zone before evaluating records.
 func (a *Application) ResolveDNS(ctx context.Context, q policy_engine.Query) (policy_engine.Decision, error) {
+	if err := resolveContextError(ctx); err != nil {
+		return policy_engine.Decision{}, err
+	}
 	best := ""
 	for _, z := range a.Store.ListZones() {
 		if strings.HasSuffix(strings.ToLower(q.Name), strings.ToLower(z.Name)) && len(z.Name) > len(best) {
@@ -80,6 +92,9 @@ func (a *Application) ResolveDNS(ctx context.Context, q policy_engine.Query) (po
 	}
 	if q.ZoneID == "" {
 		return policy_engine.Decision{Negative: true, Explanation: "no authoritative zone"}, nil
+	}
+	if err := resolveContextError(ctx); err != nil {
+		return policy_engine.Decision{}, err
 	}
 	return a.Resolve(ctx, q)
 }
