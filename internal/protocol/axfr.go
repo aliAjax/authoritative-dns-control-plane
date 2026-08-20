@@ -46,7 +46,7 @@ func EncodeTransfer(w io.Writer, t Transfer) error {
 			}
 		}
 	}
-	return bw.Flush()
+	return nil
 }
 func DecodeTransfer(rd io.Reader) (Transfer, error) {
 	s := bufio.NewScanner(rd)
