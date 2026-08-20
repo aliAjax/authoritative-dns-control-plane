@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -24,23 +23,26 @@ func (c *Client) Do(ctx context.Context, method, url string, body io.Reader) ([]
 	}
 	var last error
 	for i := 0; i < c.Retries; i++ {
+		if err := contextError(ctx); err != nil {
+			return nil, 0, err
+		}
 		req, e := http.NewRequestWithContext(ctx, method, url, body)
 		if e != nil {
 			return nil, 0, e
 		}
 		resp, e := c.HTTP.Do(req)
 		if e != nil {
-			last = fmt.Errorf("request failed: %v", e)
+			last = wrapRequestError(i+1, e)
 			continue
 		}
 		b, e := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 		resp.Body.Close()
 		if e != nil {
-			last = fmt.Errorf("response read failed: %v", e)
+			last = wrapReadError(i+1, e)
 			continue
 		}
 		if resp.StatusCode >= 500 {
-			last = fmt.Errorf("upstream status %d", resp.StatusCode)
+			last = upstreamStatusError(i+1, resp.StatusCode)
 			continue
 		}
 		return b, resp.StatusCode, nil
