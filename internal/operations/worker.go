@@ -7,14 +7,17 @@ import (
 )
 
 type Worker struct {
-	mu       sync.Mutex
-	name     string
-	interval time.Duration
-	run      func(context.Context) error
-	cancel   context.CancelFunc
-	done     chan struct{}
-	lastErr  error
-	runs     uint64
+	mu        sync.Mutex
+	lifecycle sync.Mutex
+	name      string
+	interval  time.Duration
+	run       func(context.Context) error
+	cancel    context.CancelFunc
+	done      chan struct{}
+	started   bool
+	stopped   bool
+	lastErr   error
+	runs      uint64
 }
 
 func NewWorker(name string, interval time.Duration, fn func(context.Context) error) *Worker {
@@ -24,8 +27,11 @@ func NewWorker(name string, interval time.Duration, fn func(context.Context) err
 	return &Worker{name: name, interval: interval, run: fn, done: make(chan struct{})}
 }
 func (w *Worker) Start(ctx context.Context) {
+	if !w.claimStart() {
+		return
+	}
 	ctx, cancel := context.WithCancel(ctx)
-	w.cancel = cancel
+	w.setCancel(cancel)
 	go func() {
 		defer close(w.done)
 		ticker := time.NewTicker(w.interval)
@@ -48,9 +54,13 @@ func (w *Worker) Start(ctx context.Context) {
 	}()
 }
 func (w *Worker) Stop() {
-	if w.cancel != nil {
-		w.cancel()
+	cancel, done, ok := w.claimStop()
+	if !ok {
+		return
 	}
-	<-w.done
+	if cancel != nil {
+		cancel()
+	}
+	<-done
 }
 func (w *Worker) Stats() (uint64, error) { w.mu.Lock(); defer w.mu.Unlock(); return w.runs, w.lastErr }
