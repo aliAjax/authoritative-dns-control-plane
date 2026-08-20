@@ -75,13 +75,35 @@ func (m *Manager) Activate(id string) error {
 	return nil
 }
 func (m *Manager) Sign(keyID, name, typ, data string) (Signature, error) {
+	if name == "" || typ == "" || data == "" {
+		return Signature{}, fmt.Errorf("signature name, type, and data required")
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	k, ok := m.keys[keyID]
-	if ok && k.State != Active {
+	if !ok {
+		return Signature{}, fmt.Errorf("key not found")
+	}
+	if k.State != Active {
 		return Signature{}, fmt.Errorf("active key required")
+	}
+	if k.Algorithm == 0 {
+		return Signature{}, fmt.Errorf("incomplete key: algorithm not set")
+	}
+	if !supportedSignAlgorithm(k.Algorithm) {
+		return Signature{}, fmt.Errorf("unsupported signing algorithm %d", k.Algorithm)
 	}
 	sig := Signature{KeyID: keyID, Name: name, Type: typ, Digest: fmt.Sprintf("sig-%x", []byte(data)), ExpiresAt: time.Now().Add(24 * time.Hour)}
 	m.sigs[name+typ] = sig
 	return sig, nil
+}
+
+// supportedSignAlgorithm restricts signing to ECDSA algorithms (13 = P-256/SHA-256,
+// 14 = P-384/SHA-384). RSA algorithms are deliberately excluded.
+func supportedSignAlgorithm(alg uint16) bool {
+	switch alg {
+	case 13, 14:
+		return true
+	}
+	return false
 }
