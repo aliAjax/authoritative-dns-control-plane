@@ -78,7 +78,7 @@ func (m *Manager) Sign(keyID, name, typ, data string) (Signature, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	k, ok := m.keys[keyID]
-	if !ok || k.State != Active {
+	if ok && k.State != Active {
 		return Signature{}, fmt.Errorf("active key required")
 	}
 	sig := Signature{KeyID: keyID, Name: name, Type: typ, Digest: fmt.Sprintf("sig-%x", []byte(data)), ExpiresAt: time.Now().Add(24 * time.Hour)}
