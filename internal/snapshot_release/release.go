@@ -74,9 +74,6 @@ func Rollback(ctx context.Context, s *repository.MemoryStore, id, snapID string)
 		return zone_domain.Snapshot{}, fmt.Errorf("snapshot not found")
 	}
 	rs := append([]zone_domain.RecordSet(nil), snap.Records...)
-	for i := range rs {
-		rs[i].Status = zone_domain.RolledBack
-	}
 	s.ReplaceRecords(id, rs)
 	v, _ := ValidateZone(s, id)
 	serial := s.NextSerial(id)
