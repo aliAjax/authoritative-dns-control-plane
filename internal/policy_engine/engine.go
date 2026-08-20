@@ -71,7 +71,13 @@ func Evaluate(p Policy, q Query) (Decision, error) {
 		return c[i].Priority < c[j].Priority
 	})
 	for _, r := range c {
-		ok, why := match(r, q)
+		if err := validateRule(r); err != nil {
+			return Decision{}, err
+		}
+		ok, why, matchErr := matchRule(r, q)
+		if matchErr != nil {
+			return Decision{}, matchErr
+		}
 		if !ok {
 			continue
 		}
@@ -87,23 +93,32 @@ func Evaluate(p Policy, q Query) (Decision, error) {
 	}
 	return Decision{Negative: true, Explanation: "no policy rule matched"}, nil
 }
+
 func match(r Rule, q Query) (bool, string) {
+	ok, why, _ := matchRule(r, q)
+	return ok, why
+}
+
+func matchRule(r Rule, q Query) (bool, string, error) {
 	if r.Region != "" && r.Region != q.Region {
-		return false, "region mismatch"
+		return false, "region mismatch", nil
 	}
 	if r.ASN != 0 && r.ASN != q.ASN {
-		return false, "asn mismatch"
+		return false, "asn mismatch", nil
 	}
 	if r.Provider != "" && r.Provider != q.Provider {
-		return false, "provider mismatch"
+		return false, "provider mismatch", nil
 	}
 	if r.CIDR != "" {
 		_, n, e := net.ParseCIDR(r.CIDR)
 		if e != nil || q.ClientIP == nil || !n.Contains(q.ClientIP) {
-			return false, "cidr mismatch"
+			if e != nil {
+				return false, "cidr mismatch", fmt.Errorf("invalid rule %s CIDR: %w", r.ID, e)
+			}
+			return false, "cidr mismatch", nil
 		}
 	}
-	return true, "matched " + r.ID
+	return true, "matched " + r.ID, nil
 }
 func filterHealthy(in []string, h map[string]bool) []string {
 	if len(h) == 0 {
