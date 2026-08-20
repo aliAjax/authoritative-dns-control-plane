@@ -73,13 +73,24 @@ func Rollback(ctx context.Context, s *repository.MemoryStore, id, snapID string)
 	if !ok {
 		return zone_domain.Snapshot{}, fmt.Errorf("snapshot not found")
 	}
-	rs := append([]zone_domain.RecordSet(nil), snap.Records...)
+	rs := rollbackRecords(snap.Records)
 	s.ReplaceRecords(id, rs)
 	v, _ := ValidateZone(s, id)
 	serial := s.NextSerial(id)
 	out := zone_domain.Snapshot{ID: fmt.Sprintf("rollback-%d", time.Now().UnixNano()), ZoneID: id, Serial: serial, Records: rs, Digest: v.Digest, CreatedAt: time.Now().UTC(), Immutable: true}
 	s.PutSnapshot(id, out)
 	return out, nil
+}
+func rollbackRecords(source []zone_domain.RecordSet) []zone_domain.RecordSet {
+	out := make([]zone_domain.RecordSet, len(source))
+	for i, r := range source {
+		out[i] = r
+		out[i].Status = zone_domain.RolledBack
+		if r.Values != nil {
+			out[i].Values = append([]zone_domain.RecordValue(nil), r.Values...)
+		}
+	}
+	return out
 }
 func lockFor(id string) *sync.Mutex {
 	v, _ := locks.LoadOrStore(id, &sync.Mutex{})
